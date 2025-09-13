@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { List, Card, Typography, Space, Button, Input, message, Pagination, Empty, Spin } from 'antd';
-import { LikeOutlined, CommentOutlined } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getFeed, toggleLike, addComment } from '../api/posts';
-
-const { Text } = Typography;
+import { List, Pagination, Empty, Spin, Result } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getFeed } from '../api/posts';
+import CreatePost from '../components/posts/CreatePost';
+import PostCard from '../components/posts/PostCard';
 
 const Feed = () => {
   const [page, setPage] = useState(1);
@@ -17,55 +16,20 @@ const Feed = () => {
     keepPreviousData: true,
   });
 
-  const likeMutation = useMutation({
-    mutationFn: (id) => toggleLike(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
-    onError: () => message.error('Не удалось поставить лайк'),
-  });
-
-  const commentMutation = useMutation({
-    mutationFn: ({ id, text }) => addComment(id, { text }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
-    onError: () => message.error('Не удалось добавить комментарий'),
-  });
-
   if (isLoading) return <Spin />;
-  if (isError) return <Empty description="Не удалось загрузить ленту" />;
+  if (isError) return <Result status="error" title="Ошибка" subTitle="Не удалось загрузить ленту" />;
 
   const posts = data?.posts || [];
 
   return (
     <div>
+      <CreatePost onCreated={() => queryClient.invalidateQueries({ queryKey: ['feed'] })} />
       <List
         dataSource={posts}
         locale={{ emptyText: <Empty description="Публикаций пока нет" /> }}
         renderItem={(post) => (
           <List.Item key={post._id}>
-            <Card style={{ width: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Text strong>Автор: {post.author}</Text>
-                <Text>{post.text}</Text>
-                <Space>
-                  <Button icon={<LikeOutlined />} onClick={() => likeMutation.mutate(post._id)}>
-                    {post.likes?.length || 0}
-                  </Button>
-                </Space>
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input placeholder="Напишите комментарий" onPressEnter={(e) => {
-                    const text = e.target.value.trim();
-                    if (!text) return;
-                    commentMutation.mutate({ id: post._id, text });
-                    e.target.value = '';
-                  }} />
-                  <Button icon={<CommentOutlined />} onClick={(e) => {
-                    const input = e.currentTarget.parentElement?.querySelector('input');
-                    if (input) input.focus();
-                  }}>
-                    Комментировать
-                  </Button>
-                </Space.Compact>
-              </Space>
-            </Card>
+            <PostCard post={post} onChanged={() => queryClient.invalidateQueries({ queryKey: ['feed'] })} />
           </List.Item>
         )}
       />
