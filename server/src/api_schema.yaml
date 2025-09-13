@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Easyappz Social API
-  version: 1.0.0
+  version: 1.1.0
   description: Simplified social network backend API. Source of truth for frontend requests.
 servers:
   - url: http://localhost:3001
@@ -49,16 +49,12 @@ paths:
               properties:
                 email:
                   type: string
-                  example: user@example.com
                 username:
                   type: string
-                  example: johndoe
                 name:
                   type: string
-                  example: John Doe
                 password:
                   type: string
-                  example: secret123
       responses:
         '200':
           description: Registration success
@@ -101,10 +97,8 @@ paths:
               properties:
                 email:
                   type: string
-                  example: user@example.com
                 password:
                   type: string
-                  example: secret123
       responses:
         '200':
           description: Login success
@@ -304,6 +298,561 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/posts:
+    post:
+      summary: Create a post
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: Bearer <token>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: "Hello world!"
+                images:
+                  type: array
+                  items:
+                    type: string
+                  example: ["/uploads/a.jpg"]
+      responses:
+        '200':
+          description: Created post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      post:
+                        $ref: '#/components/schemas/Post'
+        '4XX':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '5XX':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/posts/feed:
+    get:
+      summary: Get feed (own + friends)
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            example: 10
+      responses:
+        '200':
+          description: Feed posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      posts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Post'
+        '5XX':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/posts/user/{userId}:
+    get:
+      summary: Get user's posts
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Posts by user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      posts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Post'
+        '4XX':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/posts/{id}/like:
+    post:
+      summary: Toggle like for a post
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      post:
+                        $ref: '#/components/schemas/Post'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/posts/{id}/comment:
+    post:
+      summary: Add a comment to a post
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Updated post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      post:
+                        $ref: '#/components/schemas/Post'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/posts/{id}:
+    delete:
+      summary: Delete a post (owner only)
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                        example: true
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/friends/request/{userId}:
+    post:
+      summary: Send a friend request or auto-accept if opposite request exists
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: sent
+  /api/friends/accept/{userId}:
+    post:
+      summary: Accept incoming friend request
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: accepted
+  /api/friends/{userId}:
+    delete:
+      summary: Remove friend (and pending requests if any)
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      removed:
+                        type: boolean
+                        example: true
+  /api/friends/list/{userId}:
+    get:
+      summary: Get user's friends list
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Friends list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      friends:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+  /api/friends/requests:
+    get:
+      summary: Get incoming/outgoing friend requests of current user
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Requests lists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      incoming:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+                      outgoing:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+  /api/messages/{userId}:
+    post:
+      summary: Send a direct message
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        $ref: '#/components/schemas/Message'
+                      conversation:
+                        $ref: '#/components/schemas/Conversation'
+    get:
+      summary: Get message thread with a user
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            example: 10
+      responses:
+        '200':
+          description: Thread messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      messages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Message'
+  /api/conversations:
+    get:
+      summary: List user's conversations with last message string
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      conversations:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Conversation'
+  /api/upload:
+    post:
+      summary: Upload an image
+      description: Multipart form-data with field name "image". Returns a URL like /uploads/<filename>.
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        example: /uploads/1700000000-abc.jpg
+        '4XX':
+          description: Validation error (e.g., invalid file type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '5XX':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
@@ -343,6 +892,70 @@ components:
           type: string
         updatedAt:
           type: string
+    Post:
+      type: object
+      properties:
+        _id:
+          type: string
+        author:
+          type: string
+        text:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        likes:
+          type: array
+          items:
+            type: string
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                type: string
+              text:
+                type: string
+              createdAt:
+                type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    Conversation:
+      type: object
+      properties:
+        _id:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        lastMessage:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    Message:
+      type: object
+      properties:
+        _id:
+          type: string
+        conversation:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
     ErrorResponse:
       type: object
       properties:
@@ -351,4 +964,4 @@ components:
           example: false
         error:
           type: string
-          example: Human readable error message
+          example: SPECIFIC_ERROR_CODE: Human readable error message
